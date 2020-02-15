@@ -1,66 +1,14 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 var map;
-var marker;
+var db;
+const dbSize = 5 * 1024 * 1024;
+var baseUrl = "http://vanapi.gitsql.net";
+
 function initMap() {
-    // Show where it is now
-    navigator.geolocation.getCurrentPosition(
-        function(position) {
-            console.log(
-                "latitude:" +
-                    position.coords.latitude +
-                    " longitude:" +
-                    position.coords.longitude
-            );
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                },
-                zoom: 15
-            });
-            marker = new google.maps.Marker({
-                position: {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                },
-                map: map
-            });
-        },
-        function(error) {
-            switch (error.code) {
-                case 1: //PERMISSION_DENIED
-                    alert("Location Access: PERMISSION_DENIED");
-                    break;
-                case 2: //POSITION_UNAVAILABLE
-                    alert("Location Access: POSITION_UNAVAILABLE");
-                    break;
-                case 3: //TIMEOUT
-                    alert("TIMEOUT");
-                    break;
-                default:
-                    alert("Error Code: " + error.code);
-                    break;
-            }
-        }
-    );
+    map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 64.128288, lng: -21.827774 },
+        // iceland = 64.128288, -21.827774.
+        zoom: 8
+    });
 }
 
 var app = {
@@ -84,78 +32,208 @@ var app = {
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
-        var options = new ContactFindOptions();
-        options.filter = ""; // empty search string returns all contacts
-        options.multiple = true; // return multiple results
-        filter = ["displayName"]; // return contact.displayName field
-
-        // find contacts
-        navigator.contacts.find(filter, onSuccess, onError, options);
-
-        // onSuccess: Get a snapshot of the current contacts
-        //
-        function onSuccess(contacts) {
-            for (var i = 0; i < contacts.length; i++) {
-                if (contacts[i].displayName) {
-                    // many contacts don't have displayName
-                    console.log(contacts[i]);
-                    insertRow(contacts[i].displayName, "");
-                }
-                if (i == 100)
-                    // Only load the first 10 contacts
-                    break;
-            }
-            alert("contacts loaded");
-        }
-
-        function onError(err) {
-            console.log(err);
-        }
-
-        function insertRow(field1, field2) {
-            let lsContacts = localStorage.getItem("contacts");
-            if (lsContacts !== null) {
-                lsContacts = JSON.parse(lsContacts);
-            } else {
-                lsContacts = new Array();
-            }
-
-            let newRecord = {
-                contactName: field1,
-                contactEmail: field2
-            };
-            lsContacts.push(newRecord);
-
-            localStorage.setItem("contacts", JSON.stringify(lsContacts));
-        }
-
-        $(document).on("pagebeforeshow", "#home", function(event) {
-            let lsContacts = localStorage.getItem("contacts");
-            lsContacts = JSON.parse(lsContacts);
-            displayContacts(lsContacts);
+        // Let's create a database
+        db = openDatabase("places", "1", "MyPlaces", dbSize);
+        db.transaction(function(tx) {
+            tx.executeSql(
+                "CREATE TABLE IF NOT EXISTS " +
+                    "PLACES(ID INTEGER PRIMARY KEY ASC, placeName, long, lat)"
+            );
         });
 
-        function displayContacts(results) {
-            var list = $("#contactListLi");
-            list.empty();
-
-            console.log(results);
-            var len = results.length,
-                i;
-            for (i = 0; i < len; i++) {
-                list.append(
-                    `<li><a href="#editcontact">${results[i].contactName}</li>`
-                );
-                console.log(results[i].contactName);
-            }
-
-            $("#contactListLi").listview("refresh");
+        async function insertPlace(name, long = "", lat = "") {
+            return new Promise(function(resolve, reject) {
+                // save our form to websql
+                db.transaction(function(tx) {
+                    tx.executeSql(
+                        `INSERT INTO places(placeName, long, lat) VALUES (?,?,?)`,
+                        [name, long, lat],
+                        (tx, res) => {
+                            console.log(res);
+                            resolve(res);
+                        }
+                    );
+                });
+            });
         }
 
-        function saveLocation() {} // save current location on localStorage
+        async function displayPlaces(tx, results) {
+            return new Promise((resolve, reject) => {
+                var list = $("#listView");
+                list.empty();
+                console.log(results.rows);
+                var len = results.rows.length,
+                    i;
+                for (i = 0; i < len; i++) {
+                    list.append(`<li><a class="navigateTo editPlace" data-id="${
+                        results.rows.item(i).ID
+                    }" long="${results.rows.item(i).long}"
+              lat="${results.rows.item(i).lat}"
+              name="${results.rows.item(i).placeName}">${
+                        results.rows.item(i).placeName
+                    } ${results.rows.item(i).lat} ${
+                        results.rows.item(i).long
+                    }</li>`);
+                }
+                $("#listView").listview("refresh");
+                $(".navigateTo").bind("tap", function(e, ui) {
+                    launchDirections(event);
+                });
+                resolve();
+            });
+        }
+        // Bind functions
+        $("#savePlace").bind("tap", function(event, ui) {
+            saveMyPlace();
+        });
+        $("#loginButton").bind("tap", function(event, ui) {
+            performLogin();
+        });
+        $("#launchCamera").bind("tap", function(event, ui) {
+            takeSelfie();
+        });
 
-        document
-            .getElementById("save")
-            .addEventListener("click", saveLocation());
+        function launchDirections(e) {
+            directions.navigateTo(
+                e.target.getAttribute("lat"),
+                e.target.getAttribute("long")
+            );
+        }
+
+        function takeSelfie() {
+            navigator.camera.getPicture(onSuccess, onFail, {
+                quality: 50,
+                destinationType: Camera.DestinationType.FILE_URI,
+                cameraDirection: Camera.Direction.FRONT
+            });
+
+            function onSuccess(imageURI) {
+                var image = document.getElementById("selfie");
+                image.src = imageURI;
+            }
+
+            function onFail(message) {
+                alert("Failed because: " + message);
+            }
+        }
+
+        function saveMyPlace() {
+            let currentPlaceName = $("#placeName").val();
+
+            navigator.geolocation.getCurrentPosition(saveRecord, onError);
+
+            function saveRecord(position) {
+                insertPlace(
+                    currentPlaceName,
+                    position.coords.longitude,
+                    position.coords.latitude
+                );
+                console.log(currentPlaceName);
+                $("body").pagecontainer("change", "#home");
+            }
+
+            async function onError(error) {
+                alert(
+                    "code: " +
+                        error.code +
+                        "\n" +
+                        "message: " +
+                        error.message +
+                        "\n"
+                );
+                await insertPlace(currentPlaceName, "N/A", "N/A");
+                $("body").pagecontainer("change", "#home");
+            }
+        }
+
+        function performLogin() {
+            data = {
+                username: $("#username").val(),
+                password: $("#password").val()
+            };
+
+            $.ajax({
+                type: "POST",
+                url: `${baseUrl}/auth`,
+                data: JSON.stringify(data),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function(response) {
+                    console.log(response);
+                    localStorage.setItem("token", response.token);
+                    initialSync();
+                    $("body").pagecontainer("change", "#home");
+                },
+                error: function(e) {
+                    alert("Error: " + e.message);
+                }
+            });
+        }
+
+        function initialSync() {
+            $.ajax({
+                type: "GET",
+                url: `${baseUrl}/contacts`,
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader(
+                        "authtoken",
+                        localStorage.getItem("token")
+                    );
+                },
+                success: function(response) {
+                    console.log(response);
+                },
+                error: function(e) {
+                    alert("Error: " + e.message);
+                }
+            });
+        }
+
+        function onGeoSuccess(position) {
+            let coords = {
+                lat: position.coords.latitude,
+                long: position.coords.longitude
+            };
+            localStorage.setItem("currentPosition", JSON.stringify(coords));
+            console.log(coords);
+
+            var myLatLng = { lat: coords.lat, lng: coords.long };
+
+            var map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 20,
+                center: myLatLng
+            });
+
+            new google.maps.Marker({
+                position: myLatLng,
+                map: map,
+                title: "My Location"
+            });
+        }
+
+        function onGeoError(error) {
+            alert(
+                "code: " +
+                    error.code +
+                    "\n" +
+                    "message: " +
+                    error.message +
+                    "\n"
+            );
+        }
+
+        $(document).on("pagebeforeshow", "#addplace", function(event) {
+            // navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError);
+        });
+
+        $(document).on("pagebeforeshow", "#home", function(event) {
+            db.transaction(function(tx) {
+                tx.executeSql(`SELECT * FROM places`, [], (tx, res) => {
+                    displayPlaces(tx, res);
+                });
+            });
+        });
     }
 };

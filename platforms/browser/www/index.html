@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <!--
     Copyright (c) 2012-2016 Adobe Systems Incorporated. All rights reserved.
+
     Licensed to the Apache Software Foundation (ASF) under one
     or more contributor license agreements.  See the NOTICE file
     distributed with this work for additional information
@@ -8,7 +9,9 @@
     to you under the Apache License, Version 2.0 (the
     "License"); you may not use this file except in compliance
     with the License.  You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
     Unless required by applicable law or agreed to in writing,
     software distributed under the License is distributed on an
     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -35,26 +38,61 @@
     * Create your own at http://cspisawesome.com
     -->
         <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: 'unsafe-inline' https://ssl.gstatic.com; style-src 'self' 'unsafe-inline'; media-src *" /> -->
+
         <link rel="stylesheet" type="text/css" href="css/index.css" />
         <link rel="stylesheet" href="css/jquery.mobile-1.4.5.css" />
         <script src="js/jquery.js"></script>
         <script src="js/jquery.mobile-1.4.5.js"></script>
         <title>Hello World</title>
     </head>
+
     <body>
+        <div data-role="page" id="login">
+            <div data-role="header"><h1>Login</h1></div>
+            <div data-role="content">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    name="username"
+                    id="username"
+                    value="user2"
+                />
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    value="pw"
+                />
+            </div>
+            <div data-role="footer" data-position="fixed">
+                <nav data-role="navbar">
+                    <ul>
+                        <li>
+                            <a id="loginButton" href="#" data-icon="user"
+                                >Login</a
+                            >
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
         <div data-role="page" id="home">
             <div data-role="header"><h1>Places</h1></div>
             <div data-role="content">
+                <input type="button" id="launchCamera" value="Launch Camera" />
+                <img id="selfie" src="" style="width: 100%;" />
                 <ul data-role="listview" id="listView">
                     <li>
-                        <a href="#vanarts" data-item="1">Vanarts</a>
+                        <a data-item="1">Vanarts</a>
                     </li>
                 </ul>
             </div>
             <div data-role="footer" data-position="fixed">
                 <nav data-role="navbar">
                     <ul>
-                        <li><a href="/" data-icon="home">Home</a></li>
+                        <li><a href="#home" data-icon="home">Home</a></li>
                         <li>
                             <a
                                 href="#addplace"
@@ -67,9 +105,11 @@
                 </nav>
             </div>
         </div>
+
         <div data-role="page" id="addplace">
             <div data-role="header"><h1>Where am I?</h1></div>
             <div data-role="content">
+                <input type="button" id="savePlace" value="Save Place" />
                 <div class="myForm">
                     <label>Name</label>
                     <input type="text" id="placeName" />
@@ -79,14 +119,12 @@
             <div data-role="footer" data-position="fixed">
                 <nav data-role="navbar">
                     <ul>
-                        <li><a href="/" data-icon="home">Back</a></li>
-                        <li>
-                            <a href="/" id="save" data-icon="check">Save</a>
-                        </li>
+                        <li><a href="#home" data-icon="home">Back</a></li>
                     </ul>
                 </nav>
             </div>
         </div>
+
         <script type="text/javascript" src="cordova.js"></script>
         <script type="text/javascript" src="js/index.js"></script>
         <script

@@ -1,14 +1,21 @@
 var map;
+var location;
 var db;
 const dbSize = 5 * 1024 * 1024;
-var baseUrl = "http://vanapi.gitsql.net";
 
 function initMap() {
+    navigator.geolocation.getCurrentPosition(getLocation, onError);
+
     map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 64.128288, lng: -21.827774 },
-        // iceland = 64.128288, -21.827774.
+        center: { lat: latitude, lng: longitude },
         zoom: 8
     });
+}
+
+function getLocation(position) {
+    var latitude = position.coords.latitude;
+    var longitude = position.coords.longitude;
+    console.log(latitude, longitude);
 }
 
 var app = {
@@ -65,59 +72,19 @@ var app = {
                 var len = results.rows.length,
                     i;
                 for (i = 0; i < len; i++) {
-                    list.append(`<li><a class="navigateTo editPlace" data-id="${
-                        results.rows.item(i).ID
-                    }" long="${results.rows.item(i).long}"
-              lat="${results.rows.item(i).lat}"
-              name="${results.rows.item(i).placeName}">${
-                        results.rows.item(i).placeName
-                    } ${results.rows.item(i).lat} ${
-                        results.rows.item(i).long
-                    }</li>`);
+                    list.append(
+                        `<li><a class="editPlace" data-id="${
+                            results.rows.item(i).ID
+                        }">${results.rows.item(i).placeName} ${
+                            results.rows.item(i).lat
+                        } ${results.rows.item(i).long}</li>`
+                    );
                 }
                 $("#listView").listview("refresh");
-                $(".navigateTo").bind("tap", function(e, ui) {
-                    launchDirections(event);
-                });
                 resolve();
             });
         }
-        // Bind functions
-        $("#savePlace").bind("tap", function(event, ui) {
-            saveMyPlace();
-        });
-        $("#loginButton").bind("tap", function(event, ui) {
-            performLogin();
-        });
-        $("#launchCamera").bind("tap", function(event, ui) {
-            takeSelfie();
-        });
-
-        function launchDirections(e) {
-            directions.navigateTo(
-                e.target.getAttribute("lat"),
-                e.target.getAttribute("long")
-            );
-        }
-
-        function takeSelfie() {
-            navigator.camera.getPicture(onSuccess, onFail, {
-                quality: 50,
-                destinationType: Camera.DestinationType.FILE_URI,
-                cameraDirection: Camera.Direction.FRONT
-            });
-
-            function onSuccess(imageURI) {
-                var image = document.getElementById("selfie");
-                image.src = imageURI;
-            }
-
-            function onFail(message) {
-                alert("Failed because: " + message);
-            }
-        }
-
-        function saveMyPlace() {
+        $("#savePlace").bind("click", async function(event, ui) {
             let currentPlaceName = $("#placeName").val();
 
             navigator.geolocation.getCurrentPosition(saveRecord, onError);
@@ -132,7 +99,7 @@ var app = {
                 $("body").pagecontainer("change", "#home");
             }
 
-            async function onError(error) {
+            function onError(error) {
                 alert(
                     "code: " +
                         error.code +
@@ -141,55 +108,10 @@ var app = {
                         error.message +
                         "\n"
                 );
-                await insertPlace(currentPlaceName, "N/A", "N/A");
+                insertPlace(currentPlaceName, "N/A", "N/A");
                 $("body").pagecontainer("change", "#home");
             }
-        }
-
-        function performLogin() {
-            data = {
-                username: $("#username").val(),
-                password: $("#password").val()
-            };
-
-            $.ajax({
-                type: "POST",
-                url: `${baseUrl}/auth`,
-                data: JSON.stringify(data),
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                success: function(response) {
-                    console.log(response);
-                    localStorage.setItem("token", response.token);
-                    initialSync();
-                    $("body").pagecontainer("change", "#home");
-                },
-                error: function(e) {
-                    alert("Error: " + e.message);
-                }
-            });
-        }
-
-        function initialSync() {
-            $.ajax({
-                type: "GET",
-                url: `${baseUrl}/contacts`,
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                beforeSend: function(xhr) {
-                    xhr.setRequestHeader(
-                        "authtoken",
-                        localStorage.getItem("token")
-                    );
-                },
-                success: function(response) {
-                    console.log(response);
-                },
-                error: function(e) {
-                    alert("Error: " + e.message);
-                }
-            });
-        }
+        });
 
         function onGeoSuccess(position) {
             let coords = {
