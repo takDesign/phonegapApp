@@ -1,10 +1,10 @@
 var map;
 var db;
 const dbSize = 5 * 1024 * 1024;
-var baseUrl = "http://vanapi.gitsql.net";
+var baseUrl = 'http://vanapi.gitsql.net';
 
 function initMap() {
-    map = new google.maps.Map(document.getElementById("map"), {
+    map = new google.maps.Map(document.getElementById('map'), {
         center: { lat: 64.128288, lng: -21.827774 },
         // iceland = 64.128288, -21.827774.
         zoom: 8
@@ -21,27 +21,27 @@ var app = {
     // Bind any events that are required on startup. Common events are:
     // 'load', 'deviceready', 'offline', and 'online'.
     bindEvents: function() {
-        document.addEventListener("deviceready", this.onDeviceReady, false);
+        document.addEventListener('deviceready', this.onDeviceReady, false);
     },
     // deviceready Event Handler
     //
     // The scope of 'this' is the event. In order to call the 'receivedEvent'
     // function, we must explicitly call 'app.receivedEvent(...);'
     onDeviceReady: function() {
-        app.receivedEvent("deviceready");
+        app.receivedEvent('deviceready');
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
         // Let's create a database
-        db = openDatabase("places", "1", "MyPlaces", dbSize);
+        db = openDatabase('places', '1', 'MyPlaces', dbSize);
         db.transaction(function(tx) {
             tx.executeSql(
-                "CREATE TABLE IF NOT EXISTS " +
-                    "PLACES(ID INTEGER PRIMARY KEY ASC, placeName, long, lat)"
+                'CREATE TABLE IF NOT EXISTS ' +
+                    'PLACES(ID INTEGER PRIMARY KEY ASC, placeName, long, lat)'
             );
         });
 
-        async function insertPlace(name, long = "", lat = "") {
+        async function insertPlace(name, long = '', lat = '') {
             return new Promise(function(resolve, reject) {
                 // save our form to websql
                 db.transaction(function(tx) {
@@ -57,9 +57,47 @@ var app = {
             });
         }
 
-        async function displayPlaces(tx, results) {
+        async function deleteLocalStorageRecords() {
+            // update Local Storage with the record from cloud DB
+            // This will delete all the record in the table and will overwrite with the data from cloud db
+            return new Promise(function(resolve, reject) {
+                db.transaction(function(tx) {
+                    tx.executeSql(`DELETE from places`, [], (tx, res) => {
+                        console.log('deleteLocalStorageRecords done');
+                        console.log(res);
+                        resolve(res);
+                    });
+                });
+            });
+        }
+
+        // WIP
+        async function updateLocalStorageRecords(records) {
+            // update Local Storage with the record from cloud DB
+            // This will delete all the record in the table and will overwrite with the data from cloud db
+            records.map(function(record) {
+                return new Promise(function(resolve, reject) {
+                    db.transaction(function(tx) {
+                        tx.executeSql(
+                            `INSERT INTO places(placeName, long, lat) VALUES (?,?,?)`,
+                            [
+                                record.placeName,
+                                record.longitude,
+                                record.latitude
+                            ],
+                            (tx, res) => {
+                                console.log(res);
+                                resolve(res);
+                            }
+                        );
+                    });
+                });
+            });
+        }
+
+        async function displayPlaces(tx = '', results) {
             return new Promise((resolve, reject) => {
-                var list = $("#listView");
+                var list = $('#listView');
                 list.empty();
                 console.log(results.rows);
                 var len = results.rows.length,
@@ -71,32 +109,30 @@ var app = {
               lat="${results.rows.item(i).lat}"
               name="${results.rows.item(i).placeName}">${
                         results.rows.item(i).placeName
-                    } ${results.rows.item(i).lat} ${
-                        results.rows.item(i).long
                     }</li>`);
                 }
-                $("#listView").listview("refresh");
-                $(".navigateTo").bind("tap", function(e, ui) {
-                    launchDirections(event);
+                $('#listView').listview('refresh');
+                $('.navigateTo').bind('tap', function(e, ui) {
+                    launchDirections(e);
                 });
                 resolve();
             });
         }
         // Bind functions
-        $("#savePlace").bind("tap", function(event, ui) {
+        $('#savePlace').bind('tap', function(event, ui) {
             saveMyPlace();
         });
-        $("#loginButton").bind("tap", function(event, ui) {
+        $('#loginButton').bind('tap', function(event, ui) {
             performLogin();
         });
-        $("#launchCamera").bind("tap", function(event, ui) {
+        $('#launchCamera').bind('tap', function(event, ui) {
             takeSelfie();
         });
 
         function launchDirections(e) {
             directions.navigateTo(
-                e.target.getAttribute("lat"),
-                e.target.getAttribute("long")
+                e.target.getAttribute('lat'),
+                e.target.getAttribute('long')
             );
         }
 
@@ -108,17 +144,17 @@ var app = {
             });
 
             function onSuccess(imageURI) {
-                var image = document.getElementById("selfie");
+                var image = document.getElementById('selfie');
                 image.src = imageURI;
             }
 
             function onFail(message) {
-                alert("Failed because: " + message);
+                alert('Failed because: ' + message);
             }
         }
 
         function saveMyPlace() {
-            let currentPlaceName = $("#placeName").val();
+            let currentPlaceName = $('#placeName').val();
 
             navigator.geolocation.getCurrentPosition(saveRecord, onError);
 
@@ -129,64 +165,121 @@ var app = {
                     position.coords.latitude
                 );
                 console.log(currentPlaceName);
-                $("body").pagecontainer("change", "#home");
+                postRecord(
+                    currentPlaceName,
+                    position.coords.longitude,
+                    position.coords.latitude
+                );
+
+                $('body').pagecontainer('change', '#home');
             }
 
             async function onError(error) {
                 alert(
-                    "code: " +
+                    'code: ' +
                         error.code +
-                        "\n" +
-                        "message: " +
+                        '\n' +
+                        'message: ' +
                         error.message +
-                        "\n"
+                        '\n'
                 );
-                await insertPlace(currentPlaceName, "N/A", "N/A");
-                $("body").pagecontainer("change", "#home");
+                await insertPlace(currentPlaceName, 'N/A', 'N/A');
+                $('body').pagecontainer('change', '#home');
             }
         }
 
         function performLogin() {
             data = {
-                username: $("#username").val(),
-                password: $("#password").val()
+                username: $('#username').val(),
+                password: $('#password').val()
             };
 
             $.ajax({
-                type: "POST",
+                type: 'POST',
                 url: `${baseUrl}/auth`,
                 data: JSON.stringify(data),
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
                 success: function(response) {
                     console.log(response);
-                    localStorage.setItem("token", response.token);
+                    localStorage.setItem('token', response.token);
                     initialSync();
-                    $("body").pagecontainer("change", "#home");
+                    $('body').pagecontainer('change', '#home');
                 },
                 error: function(e) {
-                    alert("Error: " + e.message);
+                    alert('Error: ' + e.message);
                 }
             });
         }
 
         function initialSync() {
+            var records;
+
             $.ajax({
-                type: "GET",
-                url: `${baseUrl}/contacts`,
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
+                type: 'GET',
+                url: `${baseUrl}/places`,
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader(
-                        "authtoken",
-                        localStorage.getItem("token")
+                        'authtoken',
+                        localStorage.getItem('token')
                     );
                 },
                 success: function(response) {
                     console.log(response);
+                    console.log('Initial sync done');
+                    records = response;
+                    // db.transaction(function(tx) {
+                    //     tx.executeSql(`SELECT * FROM places`, [], (tx, res) => {
+                    //         displayPlaces(tx, res);
+                    //     });
+                    // });
                 },
                 error: function(e) {
-                    alert("Error: " + e.message);
+                    alert('Error: ' + e.message);
+                }
+            })
+                .done(function() {
+                    deleteLocalStorageRecords();
+                })
+                .done(function() {
+                    updateLocalStorageRecords(records);
+                })
+                .done(function() {
+                    db.transaction(function(tx) {
+                        tx.executeSql(`SELECT * FROM places`, [], (tx, res) => {
+                            displayPlaces(tx, res);
+                        });
+                    });
+                });
+        }
+
+        function postRecord(name, lon, lat) {
+            // below sample data for testing
+            data = {
+                placeName: name,
+                longitude: lon,
+                latitude: lat
+            };
+            $.ajax({
+                type: 'POST',
+                url: `${baseUrl}/places`,
+                data: JSON.stringify(data),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader(
+                        'authtoken',
+                        localStorage.getItem('token')
+                    );
+                },
+                success: function(response) {
+                    console.log(response);
+                    console.log('PostRecord done');
+                },
+                error: function(e) {
+                    alert('Error: ' + e.message);
                 }
             });
         }
@@ -196,12 +289,12 @@ var app = {
                 lat: position.coords.latitude,
                 long: position.coords.longitude
             };
-            localStorage.setItem("currentPosition", JSON.stringify(coords));
+            localStorage.setItem('currentPosition', JSON.stringify(coords));
             console.log(coords);
 
             var myLatLng = { lat: coords.lat, lng: coords.long };
 
-            var map = new google.maps.Map(document.getElementById("map"), {
+            var map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 20,
                 center: myLatLng
             });
@@ -209,26 +302,26 @@ var app = {
             new google.maps.Marker({
                 position: myLatLng,
                 map: map,
-                title: "My Location"
+                title: 'My Location'
             });
         }
 
         function onGeoError(error) {
             alert(
-                "code: " +
+                'code: ' +
                     error.code +
-                    "\n" +
-                    "message: " +
+                    '\n' +
+                    'message: ' +
                     error.message +
-                    "\n"
+                    '\n'
             );
         }
 
-        $(document).on("pagebeforeshow", "#addplace", function(event) {
-            // navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError);
+        $(document).on('pagebeforeshow', '#addplace', function(event) {
+            navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError);
         });
 
-        $(document).on("pagebeforeshow", "#home", function(event) {
+        $(document).on('pagebeforeshow', '#home', function(event) {
             db.transaction(function(tx) {
                 tx.executeSql(`SELECT * FROM places`, [], (tx, res) => {
                     displayPlaces(tx, res);

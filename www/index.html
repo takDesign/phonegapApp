@@ -38,12 +38,12 @@
     * Create your own at http://cspisawesome.com
     -->
         <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: 'unsafe-inline' https://ssl.gstatic.com; style-src 'self' 'unsafe-inline'; media-src *" /> -->
-
-        <link rel="stylesheet" type="text/css" href="css/index.css" />
         <link rel="stylesheet" href="css/jquery.mobile-1.4.5.css" />
         <script src="js/jquery.js"></script>
         <script src="js/jquery.mobile-1.4.5.js"></script>
-        <title>Hello World</title>
+        <link rel="stylesheet" href="css/custom-theme.min.css" />
+        <link rel="stylesheet" type="text/css" href="css/index.min.css" />
+        <title>Map App</title>
     </head>
 
     <body>
@@ -55,7 +55,7 @@
                     type="text"
                     name="username"
                     id="username"
-                    value="user2"
+                    value="user3"
                 />
                 <label for="password">Password</label>
                 <input
@@ -84,9 +84,9 @@
                 <input type="button" id="launchCamera" value="Launch Camera" />
                 <img id="selfie" src="" style="width: 100%;" />
                 <ul data-role="listview" id="listView">
-                    <li>
+                    <!-- <li>
                         <a data-item="1">Vanarts</a>
-                    </li>
+                    </li> -->
                 </ul>
             </div>
             <div data-role="footer" data-position="fixed">
@@ -97,7 +97,7 @@
                             <a
                                 href="#addplace"
                                 data-icon="plus"
-                                data-transition="flip"
+                                data-transition="slide"
                                 >Place</a
                             >
                         </li>
